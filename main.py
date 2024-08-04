@@ -1,4 +1,6 @@
 from submodules.MEGA import MEGA
+from submodules.vanischeCV import *
+
 import cv2 as cv 
 
 
@@ -11,4 +13,5 @@ if __name__ == "__main__":
         if not ret:
             continue
 
-    
+        frame = Frame(frame, 'bgr').show('frame')
+
