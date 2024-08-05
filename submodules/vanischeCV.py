@@ -150,6 +150,10 @@ class Frame:
         self.bgr = cv2.cvtColor(self.src, self.get_cvt_code('bgr'))
         return Frame(self.bgr, 'bgr')
 
+    def cvt2rgb(self) -> Frame:
+        self.bgr = cv2.cvtColor(self.src, self.get_cvt_code('rgb'))
+        return Frame(self.bgr, 'rgb')
+
     def cvt2hsv(self) -> Frame:
         self.hsv = cv2.cvtColor(self.src, self.get_cvt_code('hsv'))
         return Frame(self.hsv, 'hsv')
@@ -166,6 +170,8 @@ class Frame:
                 return cv2.COLOR_BGR2HSV
             elif dst_colorspace == 'gray':
                 return cv2.COLOR_BGR2GRAY
+            elif dst_colorspace == 'rgb':
+                return cv2.COLOR_BGR2RGB
             
         elif self.colorspace == 'hsv':
             if dst_colorspace == 'bgr':
@@ -174,6 +180,10 @@ class Frame:
         elif self.colorspace == 'gray':
             if dst_colorspace == 'bgr':
                 return cv2.COLOR_GRAY2BGR
+
+        elif self.colorspace == 'rgb':
+            if dst_colorspace == 'gray':
+                return cv2.COLOR_RGB2GRAY
 
     def blur(self, ksize: int) -> Frame:
         self.blur = cv2.blur(self.src, (ksize, ksize))
