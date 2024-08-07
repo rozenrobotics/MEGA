@@ -310,18 +310,20 @@ class Frame:
         return self
 
 
-    def draw_conts_boxes(self, conts: list = None) -> Frame:
+    def draw_conts_boxes(self, conts: list = None, area: int = 100) -> Frame:
         if conts is None:
             if self.conts is not None:
                 for cont in self.conts:
-                    x, y, w, h = cv2.boundingRect(cont)
-                    cv2.rectangle(self.src, (x, y), (x+w, y+h), Colors.RED, 2)
+                    if cv2.contourArea(cont) > area:
+                        x, y, w, h = cv2.boundingRect(cont)
+                        cv2.rectangle(self.src, (x, y), (x+w, y+h), Colors.RED, 2)
                 return self
             return self
 
         for cont in conts:
-            x, y, w, h = cv2.boundingRect(cont)
-            cv2.rectangle(self.src, (x, y), (x+w, y+h), Colors.GREEN, 2)
+            if cv2.contourArea(cont) > area:
+                x, y, w, h = cv2.boundingRect(cont)
+                cv2.rectangle(self.src, (x, y), (x+w, y+h), Colors.GREEN, 2)
         return self
 
 
