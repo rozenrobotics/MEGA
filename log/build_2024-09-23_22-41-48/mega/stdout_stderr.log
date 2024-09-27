@@ -1,0 +1,32 @@
+running egg_info
+creating ../../build/mega/mega.egg-info
+writing ../../build/mega/mega.egg-info/PKG-INFO
+writing dependency_links to ../../build/mega/mega.egg-info/dependency_links.txt
+writing entry points to ../../build/mega/mega.egg-info/entry_points.txt
+writing requirements to ../../build/mega/mega.egg-info/requires.txt
+writing top-level names to ../../build/mega/mega.egg-info/top_level.txt
+writing manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+reading manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/vanische/Rozen/MEGA/build/mega/build
+creating /home/vanische/Rozen/MEGA/build/mega/build/lib
+creating /home/vanische/Rozen/MEGA/build/mega/build/lib/mega
+copying mega/__init__.py -> /home/vanische/Rozen/MEGA/build/mega/build/lib/mega
+running install
+running install_lib
+creating /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega
+copying /home/vanische/Rozen/MEGA/build/mega/build/lib/mega/__init__.py -> /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega
+byte-compiling /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /home/vanische/Rozen/MEGA/install/mega/share/ament_index
+creating /home/vanische/Rozen/MEGA/install/mega/share/ament_index/resource_index
+creating /home/vanische/Rozen/MEGA/install/mega/share/ament_index/resource_index/packages
+copying resource/mega -> /home/vanische/Rozen/MEGA/install/mega/share/ament_index/resource_index/packages
+copying package.xml -> /home/vanische/Rozen/MEGA/install/mega/share/mega
+running install_egg_info
+Copying ../../build/mega/mega.egg-info to /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega-0.0.0-py3.10.egg-info
+running install_scripts
+writing list of installed files to '/home/vanische/Rozen/MEGA/build/mega/install.log'

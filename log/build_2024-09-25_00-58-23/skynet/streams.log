@@ -1,0 +1,22 @@
+[0.674s] Invoking command in '/home/vanische/Rozen/MEGA/src/skynet': PYTHONPATH=/home/vanische/Rozen/MEGA/build/skynet/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/vanische/Rozen/MEGA/install/skynet/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/skynet build --build-base /home/vanische/Rozen/MEGA/build/skynet/build install --record /home/vanische/Rozen/MEGA/build/skynet/install.log --single-version-externally-managed install_data
+[0.869s] running egg_info
+[0.869s] writing ../../build/skynet/skynet.egg-info/PKG-INFO
+[0.870s] writing dependency_links to ../../build/skynet/skynet.egg-info/dependency_links.txt
+[0.870s] writing entry points to ../../build/skynet/skynet.egg-info/entry_points.txt
+[0.870s] writing requirements to ../../build/skynet/skynet.egg-info/requires.txt
+[0.870s] writing top-level names to ../../build/skynet/skynet.egg-info/top_level.txt
+[0.872s] reading manifest file '../../build/skynet/skynet.egg-info/SOURCES.txt'
+[0.872s] adding license file 'LICENSE'
+[0.872s] writing manifest file '../../build/skynet/skynet.egg-info/SOURCES.txt'
+[0.872s] running build
+[0.872s] running build_py
+[0.873s] running install
+[0.873s] running install_lib
+[0.874s] running install_data
+[0.874s] running install_egg_info
+[0.876s] removing '/home/vanische/Rozen/MEGA/install/skynet/lib/python3.10/site-packages/skynet-0.0.0-py3.10.egg-info' (and everything under it)
+[0.876s] Copying ../../build/skynet/skynet.egg-info to /home/vanische/Rozen/MEGA/install/skynet/lib/python3.10/site-packages/skynet-0.0.0-py3.10.egg-info
+[0.877s] running install_scripts
+[0.895s] Installing skynet script to /home/vanische/Rozen/MEGA/install/skynet/lib/skynet
+[0.895s] writing list of installed files to '/home/vanische/Rozen/MEGA/build/skynet/install.log'
+[0.916s] Invoked command in '/home/vanische/Rozen/MEGA/src/skynet' returned '0': PYTHONPATH=/home/vanische/Rozen/MEGA/build/skynet/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/vanische/Rozen/MEGA/install/skynet/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/skynet build --build-base /home/vanische/Rozen/MEGA/build/skynet/build install --record /home/vanische/Rozen/MEGA/build/skynet/install.log --single-version-externally-managed install_data

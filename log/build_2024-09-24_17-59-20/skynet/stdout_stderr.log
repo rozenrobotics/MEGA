@@ -1,0 +1,21 @@
+running egg_info
+writing ../../build/skynet/skynet.egg-info/PKG-INFO
+writing dependency_links to ../../build/skynet/skynet.egg-info/dependency_links.txt
+writing entry points to ../../build/skynet/skynet.egg-info/entry_points.txt
+writing requirements to ../../build/skynet/skynet.egg-info/requires.txt
+writing top-level names to ../../build/skynet/skynet.egg-info/top_level.txt
+reading manifest file '../../build/skynet/skynet.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../../build/skynet/skynet.egg-info/SOURCES.txt'
+running build
+running build_py
+running install
+running install_lib
+running install_data
+creating /home/vanische/Rozen/MEGA/install/skynet/share/skynet/launch
+running install_egg_info
+removing '/home/vanische/Rozen/MEGA/install/skynet/lib/python3.10/site-packages/skynet-0.0.0-py3.10.egg-info' (and everything under it)
+Copying ../../build/skynet/skynet.egg-info to /home/vanische/Rozen/MEGA/install/skynet/lib/python3.10/site-packages/skynet-0.0.0-py3.10.egg-info
+running install_scripts
+Installing skynet script to /home/vanische/Rozen/MEGA/install/skynet/lib/skynet
+writing list of installed files to '/home/vanische/Rozen/MEGA/build/skynet/install.log'

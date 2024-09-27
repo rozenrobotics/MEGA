@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="mega" exec="stereo_camera" name="stereo_camera" output="screen"/>
+    <node pkg="mega" exec="serial"     	  name="serial"        output="screen"/>
+</launch>

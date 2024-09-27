@@ -1,0 +1,6 @@
+[console_scripts]
+bottom_camera = mega.bottom_camera:main
+serial_comm = mega.serial_comm:main
+state_machine = mega.state_machine:main
+stereo_camera = mega.stereo_camera:main
+

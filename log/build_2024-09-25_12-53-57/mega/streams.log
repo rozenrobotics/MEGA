@@ -1,0 +1,28 @@
+[0.828s] Invoking command in '/home/vanische/Rozen/MEGA/src/mega': PYTHONPATH=/home/vanische/Rozen/MEGA/build/mega/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/mega build --build-base /home/vanische/Rozen/MEGA/build/mega/build install --record /home/vanische/Rozen/MEGA/build/mega/install.log --single-version-externally-managed install_data
+[1.024s] running egg_info
+[1.024s] writing ../../build/mega/mega.egg-info/PKG-INFO
+[1.025s] writing dependency_links to ../../build/mega/mega.egg-info/dependency_links.txt
+[1.025s] writing entry points to ../../build/mega/mega.egg-info/entry_points.txt
+[1.025s] writing requirements to ../../build/mega/mega.egg-info/requires.txt
+[1.025s] writing top-level names to ../../build/mega/mega.egg-info/top_level.txt
+[1.027s] reading manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+[1.027s] adding license file 'LICENSE'
+[1.028s] writing manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+[1.028s] running build
+[1.028s] running build_py
+[1.028s] copying mega/serial_comm.py -> /home/vanische/Rozen/MEGA/build/mega/build/lib/mega
+[1.029s] running install
+[1.029s] running install_lib
+[1.030s] copying /home/vanische/Rozen/MEGA/build/mega/build/lib/mega/serial_comm.py -> /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega
+[1.030s] byte-compiling /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega/serial_comm.py to serial_comm.cpython-310.pyc
+[1.031s] running install_data
+[1.031s] running install_egg_info
+[1.033s] removing '/home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega-0.0.0-py3.10.egg-info' (and everything under it)
+[1.033s] Copying ../../build/mega/mega.egg-info to /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega-0.0.0-py3.10.egg-info
+[1.034s] running install_scripts
+[1.051s] Installing bottom_camera script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+[1.051s] Installing serial_comm script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+[1.051s] Installing state_machine script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+[1.052s] Installing stereo_camera script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+[1.052s] writing list of installed files to '/home/vanische/Rozen/MEGA/build/mega/install.log'
+[1.092s] Invoked command in '/home/vanische/Rozen/MEGA/src/mega' returned '0': PYTHONPATH=/home/vanische/Rozen/MEGA/build/mega/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/mega build --build-base /home/vanische/Rozen/MEGA/build/mega/build install --record /home/vanische/Rozen/MEGA/build/mega/install.log --single-version-externally-managed install_data

@@ -1,0 +1,27 @@
+running egg_info
+writing ../../build/mega/mega.egg-info/PKG-INFO
+writing dependency_links to ../../build/mega/mega.egg-info/dependency_links.txt
+writing entry points to ../../build/mega/mega.egg-info/entry_points.txt
+writing requirements to ../../build/mega/mega.egg-info/requires.txt
+writing top-level names to ../../build/mega/mega.egg-info/top_level.txt
+reading manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../../build/mega/mega.egg-info/SOURCES.txt'
+running build
+running build_py
+copying mega/state_machine.py -> /home/vanische/Rozen/MEGA/build/mega/build/lib/mega
+running install
+running install_lib
+copying /home/vanische/Rozen/MEGA/build/mega/build/lib/mega/state_machine.py -> /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega
+byte-compiling /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega/state_machine.py to state_machine.cpython-310.pyc
+running install_data
+copying package.xml -> /home/vanische/Rozen/MEGA/install/mega/share/mega
+running install_egg_info
+removing '/home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega-0.0.0-py3.10.egg-info' (and everything under it)
+Copying ../../build/mega/mega.egg-info to /home/vanische/Rozen/MEGA/install/mega/lib/python3.10/site-packages/mega-0.0.0-py3.10.egg-info
+running install_scripts
+Installing bottom_camera script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+Installing serial_comm script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+Installing state_machine script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+Installing stereo_camera script to /home/vanische/Rozen/MEGA/install/mega/lib/mega
+writing list of installed files to '/home/vanische/Rozen/MEGA/build/mega/install.log'
