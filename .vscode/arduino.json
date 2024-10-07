@@ -1,7 +1,7 @@
 {
     "configuration": "cpu=atmega2560",
     "board": "arduino:avr:mega",
-    "sketch": "src/main/main.ino",
+    "sketch": "src/main/lib/lib.ino",
     "port": "/dev/ttyACM0",
     "programmer": "avrispmkii"
 }

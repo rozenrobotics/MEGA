@@ -5,6 +5,7 @@ const uint8_t MATRIX_PIN_DIN = 7;
 const uint8_t MATRIX_PIN_CS  = 6;
 const uint8_t MATRIX_PIN_CLK = 5;
 
+
 namespace indication 
 {
     namespace symbols 
@@ -100,6 +101,13 @@ namespace indication
                 }
             }
 
+            inline static void indication()
+            {
+                if (control::values.mode == 0) display(indication::symbols::N);
+                if (control::values.mode == 1) display(indication::symbols::A);
+                if (control::values.mode == 2) display(indication::symbols::M);
+            }
+            
             static void blackout()
             {
                 matrix.clearDisplay(0);
@@ -107,13 +115,3 @@ namespace indication
     };
 
 } // of indication 
-
-void setup()
-{
-  indication::Matrix::setup();
-}
-
-void loop()
-{
-  indication::Matrix::display(indication::symbols::CUBE);
-}
