@@ -2,23 +2,43 @@ __author__ = "Yuri Glamazdin <yglamazdin@gmail.com>"
 __version__ = "1.6"
 
 import atexit
-import math
-import os
-import platform
 import socket
 import struct
 import threading
-
-# install turbo
-# sudo apt-get install libturbojpeg-dev
 import time
+
+import cv2
+import zmq
+
+
+# for TURBO
+def cv2_decode_image_buffer(img_buffer):
+    img_array = np.frombuffer(img_buffer, dtype=np.dtype("uint8"))
+    # Decode a colored image
+    return cv2.imdecode(img_array, flags=cv2.IMREAD_UNCHANGED)
+
+
+def cv2_encode_image(cv2_img, jpeg_quality):
+    encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality]
+    result, buf = cv2.imencode(".jpg", cv2_img, encode_params)
+    return buf.tobytes()
+
+
+def turbo_decode_image_buffer(img_buffer, jpeg):
+    return jpeg.decode(img_buffer)
+
+
+def turbo_encode_image(cv2_img, jpeg, jpeg_quality):
+    return jpeg.encode(cv2_img, quality=jpeg_quality)
+
+
+import os
+import platform
 import warnings
 from ctypes import *
 from ctypes.util import find_library
 
-import cv2
 import numpy as np
-import zmq
 
 # default libTurboJPEG library path
 DEFAULT_LIB_PATHS = {
@@ -305,8 +325,6 @@ class TurboJPEG(object):
             return self.__get_error_str2(handle).decode()
         return self.__get_error_str().decode()
 
-    "Маруся кошечка"
-
     def __find_turbojpeg(self):
         """returns default turbojpeg library path if possible"""
         lib_path = find_library("turbojpeg")
@@ -374,12 +392,16 @@ class SkyNetAPI:
     manual_speed = 150
     manual_angle = 0
     frame = np.ones((480, 640, 3), dtype=np.uint8)
+    __joy_data = []
+    __mouse_data = []
     small_frame = 0
     motor_left = 0
     motor_rigth = 0
     flag_serial = False
     flag_pyboard = False
     time_frame = time.time() + 1000
+    __cap = []
+    __num_active_cam = 0
     stop_frames = False
     quality = 20
 
@@ -387,10 +409,15 @@ class SkyNetAPI:
         self,
         flag_video=True,
         flag_keyboard=True,
+        flag_serial=True,
+        flag_pyboard=False,
         udp_stream=True,
         udp_turbo_stream=True,
         udp_event=True,
     ):
+        self.flag_serial = flag_serial
+        self.flag_pyboard = flag_pyboard
+
         atexit.register(self.cleanup)
         atexit.register(self.cleanup)
 
@@ -459,6 +486,11 @@ class SkyNetAPI:
         self.my_thread_f.start()
 
     def end_work(self):
+        # self.cap.release()
+        if self.flag_video:
+            for i in self.__cap:
+                if i is not None:
+                    i.release()
         self.stop_frames = True
         time.sleep(0.3)
         self.frame = np.array([[10, 10], [10, 10]], dtype=np.uint8)
@@ -469,6 +501,16 @@ class SkyNetAPI:
 
     def cleanup(self):
         self.end_work()
+
+    def joy(self):
+        j = self.__joy_data.copy()
+        self.__joy_data = []
+        return j
+
+    def mouse(self):
+        m = self.__mouse_data.copy()
+        self.__mouse_data = []
+        return m
 
     def __work_udp(self):
 
@@ -570,7 +612,12 @@ class SkyNetAPI:
                     pass
 
                 if len(message) > 0:
-                    self.last_key = int(message.lstrip())
+                    if message.find("m") > -1:
+                        self.__mouse_data = message.split(",")[1:]
+                    elif message.find("j") > -1:
+                        self.__joy_data = message.split(",")[1:]
+                    else:
+                        self.last_key = int(message.lstrip())
 
                     try:
                         self.socket2.send_string("|")
@@ -584,7 +631,24 @@ class SkyNetAPI:
     def __work_f(self):
         self.stop_frames = False
         while True:
-            pass
+
+            if self.stop_frames == False and self.flag_video:
+                if len(self.__cap) > 0:
+                    if self.__cap[self.__num_active_cam] is not None:
+                        ret, frame = self.__cap[self.__num_active_cam].read()
+
+                        if ret is not None:
+                            self.frame = frame
+                            self.time_frame = time.time()
+                        else:
+                            self.stop_frames = True
+                    else:
+                        time.sleep(0.001)
+                else:
+                    time.sleep(0.001)
+
+            else:
+                time.sleep(0.001)
 
     def get_key(self):
         l = self.last_key
@@ -634,9 +698,32 @@ class SkyNetAPI:
             else:
                 time.sleep(0.001)
 
-    def set_frame(self, frame, quality=30):
+    def create_data_panel(self, frame, telemetry_values):
+        data_panel_width = 200
+        data_panel_height = frame.shape[0]
+        data_panel = np.zeros((data_panel_height, data_panel_width, frame.shape[2]), dtype=np.uint8)
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        text_color = (100, 255, 0)  # White text
+        line_spacing = 10
+        y_offset = 10
+
+        for i, value in enumerate(telemetry_values):
+            text = f"{value[0]}/ {value[1]}"
+            text_size, _ = cv2.getTextSize(text, font, font_scale, thickness=1)
+            x_offset = 10  # (data_panel_width - text_size[0]) // 2
+            y_offset += text_size[1] + line_spacing
+
+            cv2.putText(
+                data_panel, text, (x_offset, y_offset), font, font_scale, text_color, 1
+            )
+
+        return data_panel
+
+    def set_frame(self, frame, telemetry: list = [], quality=30):
         self.quality = quality
-        self.last_frame = frame
+        self.last_frame = cv2.hconcat([frame, self.create_data_panel(frame, telemetry)])
 
     def _fromInt16(self, value):
         return struct.unpack("<BB", struct.pack("@h", value))
