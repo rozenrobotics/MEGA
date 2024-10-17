@@ -130,14 +130,6 @@ void cube_up() {
 
 void cube_down() {
 	additional.servo_cube.write(130);
-/**
-  if (position == 120) additional.servo_cube.write(position);
-  else {
-    for (position; position <= 120; ++position) {
-      additional.servo_cube.write(position);
-    }
-  }
-  **/
 }
 
 void winch_up() {
@@ -200,10 +192,10 @@ void read() {
 }
 
 void manual() {
-  MotorsSpeeds.Speed_back_left = map(constrain(controlValues.pitch + controlValues.roll, -100, 100), -100, 100, 1000, 2000);
-  MotorsSpeeds.Speed_back_right = map(constrain(controlValues.pitch - controlValues.roll, -100, 100), -100, 100, 2000, 1000);
-  MotorsSpeeds.Speed_front_left = map(constrain(controlValues.pitch + controlValues.roll, -100, 100), -100, 100, 1000, 2000);
-  MotorsSpeeds.Speed_front_right = map(constrain(controlValues.pitch - controlValues.roll, -100, 100), -100, 100, 1000, 2000);
+  MotorsSpeeds.Speed_back_left = map(constrain(controlValues.pitch + controlValues.roll - controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
+  MotorsSpeeds.Speed_back_right = map(constrain(controlValues.pitch - controlValues.roll + controlValues.yaw, -100, 100), -100, 100, 2000, 1000);
+  MotorsSpeeds.Speed_front_left = map(constrain(controlValues.pitch + controlValues.roll + controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
+  MotorsSpeeds.Speed_front_right = map(constrain(controlValues.pitch - controlValues.roll - controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
 	if (!controlValues.cube_state) cube_up();
 		else cube_down();
 
