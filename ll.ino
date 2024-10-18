@@ -3,7 +3,7 @@
 #include "Servo.h"
 const int16_t COMPASS_ADDRESS = 0x01;
 int16_t converted_value;
-const uint32_t MID = 1500;
+const uint32_t MID = 1488;
 uint16_t raw;
 //compass
 
@@ -15,7 +15,7 @@ const uint8_t CUBE_PIN = 9;  // условно (3 pr 2)
 
 byte INTERRUPT_PIN = 19;
 byte CHANNEL_AMOUNT = 8;
-const uint16_t MOTOR_MIDDLE_VALUE = 1500;
+const uint16_t MOTOR_MIDDLE_VALUE = 1488;
 const uint8_t MOTOR_MIDDLE_FILTER = 20;
 byte CUBE_STATE = 6;
 byte WINCH_STATE = 7;
@@ -43,23 +43,23 @@ struct
 
 struct
 {
-  int Speed_back_right;   // 4
-  int Speed_back_left;    // 5
-  int Speed_front_right;  // 6
-  int Speed_front_left;   // 7
+  int Speed_back_right = MID;   // 4
+  int Speed_back_left = MID;    // 5
+  int Speed_front_right = MID;  // 6
+  int Speed_front_left = MID;   // 7
 } MotorsSpeeds;
 
 struct
 {
   bool mode = false;
-  uint16_t winch_state;
-  uint16_t cube_state;
-  uint16_t empty;
+  uint16_t winch_state = 0;
+  uint16_t cube_state = 0;
+  uint16_t empty = 0;
 
-  int16_t yaw;
-  int16_t roll;
-  int16_t pitch;
-  int16_t throttle;  // values
+  int16_t yaw = 9;
+  int16_t roll = 0;
+  int16_t pitch = 0;
+  int16_t throttle = 9;  // values
 } controlValues;
 
 bool flag_start = false;
@@ -188,20 +188,38 @@ void read() {
   		controlValues.roll = readPPMData(ROLL, -100, 100, 0);          // подворот
   		controlValues.pitch = readPPMData(PITCH, -100, 100, 0);        // подворот
   		controlValues.throttle = readPPMData(THROTTLE, -100, 100, 0);  // газ скорость
+
+		if (abs(controlValues.yaw) < 10) controlValues.yaw = 0;
+		if (abs(controlValues.roll) < 10) controlValues.roll = 0;
+		if (abs(controlValues.pitch) < 10) controlValues.pitch = 0;
+		if (abs(controlValues.throttle) < 10) controlValues.throttle = 0;
   }
 }
 
 void manual() {
-  MotorsSpeeds.Speed_back_left = map(constrain(controlValues.pitch + controlValues.roll - controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
-  MotorsSpeeds.Speed_back_right = map(constrain(controlValues.pitch - controlValues.roll + controlValues.yaw, -100, 100), -100, 100, 2000, 1000);
-  MotorsSpeeds.Speed_front_left = map(constrain(controlValues.pitch + controlValues.roll + controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
-  MotorsSpeeds.Speed_front_right = map(constrain(controlValues.pitch - controlValues.roll - controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
-	if (!controlValues.cube_state) cube_up();
-		else cube_down();
+  MotorsSpeeds.Speed_back_left = constrain(controlValues.pitch + controlValues.roll - controlValues.yaw, -100, 100);
+  MotorsSpeeds.Speed_back_right = constrain(controlValues.pitch - controlValues.roll + controlValues.yaw, -100, 100);
+  MotorsSpeeds.Speed_front_left = constrain(controlValues.pitch + controlValues.roll + controlValues.yaw, -100, 100);
+  MotorsSpeeds.Speed_front_right = constrain(controlValues.pitch - controlValues.roll - controlValues.yaw, -100, 100);
 
-		if (controlValues.winch_state == 0) winch_stop(); else
-		if (controlValues.winch_state == 1) winch_up(); else
-		if (controlValues.winch_state == 2) winch_down();
+  if (MotorsSpeeds.Speed_back_left == 0) MotorsSpeeds.Speed_back_left = MID;
+  else MotorsSpeeds.Speed_back_left = map(constrain(controlValues.pitch + controlValues.roll - controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
+
+  if (MotorsSpeeds.Speed_back_right == 0) MotorsSpeeds.Speed_back_right = MID;
+  else MotorsSpeeds.Speed_back_right = map(constrain(controlValues.pitch - controlValues.roll + controlValues.yaw, -100, 100), -100, 100, 2000, 1000);
+
+  if (MotorsSpeeds.Speed_front_left == 0) MotorsSpeeds.Speed_front_left = MID;
+  else MotorsSpeeds.Speed_front_left = map(constrain(controlValues.pitch + controlValues.roll + controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
+
+  if (MotorsSpeeds.Speed_front_right == 0) MotorsSpeeds.Speed_front_right = MID;
+  else MotorsSpeeds.Speed_front_right = map(constrain(controlValues.pitch - controlValues.roll - controlValues.yaw, -100, 100), -100, 100, 1000, 2000);
+
+  if (!controlValues.cube_state) cube_up();
+  else cube_down();
+
+  if (controlValues.winch_state == 0) winch_stop(); else
+  if (controlValues.winch_state == 1) winch_up(); else
+  if (controlValues.winch_state == 2) winch_down();
 
 }
 
@@ -313,5 +331,5 @@ void loop() {
 
 	move();
 
-	delay(15);
+	//delay(15);
 }
