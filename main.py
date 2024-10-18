@@ -4,12 +4,11 @@ from time import sleep, time
 import cv2 as cv
 import numpy as np
 from cv2.typing import MatLike
-from loguru import logger
-from serial import Serial
-
 from lib.fps import FramesPerSecond
 from lib.MEGA import MEGA
 from lib.pid import PDCompass
+from loguru import logger
+from serial import Serial
 from static.bounds import Bounds
 
 GATES_COURSE_0 = 120
