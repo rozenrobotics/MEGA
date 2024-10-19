@@ -1,29 +1,60 @@
-from collections.abc import Sequence
 from time import sleep, time
 
 import cv2 as cv
 import numpy as np
 from cv2.typing import MatLike
+
 from lib.fps import FramesPerSecond
 from lib.MEGA import MEGA
 from lib.pid import PDCompass
+
 from loguru import logger
 from serial import Serial
 from static.bounds import Bounds
 
-GATES_COURSE_0 = 120
-GATES_COURSE_1 = 80
-GATES_COURSE_2 = 240
-GATES_TIME_0 = 13
-GATES_TIME_1 = 13
-GATES_TIME_2 = 13
+SPEED = 85 
+START_STATE = "Gates2"
 
-SPONGE_HEAD = 120
+GATES_COURSE_RED = 110
+GATES_COURSE_GREEN = 240 
+GATES_COURSE_BLUE = 240
+GATES_TMR_RED = 17
+GATES_TMR_GREEN = 6
+GATES_TMR_BLUE = 1
 
-PROBO_HEAD = 310
-PROBO_BUTT = 300
-SPEED = 70
-START_STATE = "Probo"
+GATES2_COURSE_RED = 15
+GATES2_COURSE_GREEN = 315 
+GATES2_COURSE_BLUE = 240
+GATES2_TMR_RED = 6
+GATES2_TMR_GREEN = 8
+# GATES2_TMR_BLUE = 8 # no litter 
+GATES2_TMR_BLUE = 11 # litter
+
+SPONGE_COURSE_HEAD = 285
+SPONGE_TMR_SEARCH = 6
+SPONGE_TMR_WINCH = 20
+SPONGE_BOUND_CONT_AREA = 1000
+
+CUBE_COURSE_BUTT = 35
+CUBE_TMR_BUTT = 5 
+CUBE_TMR_CUBING = 2
+
+LITTER_COURSE_HEAD = 295
+LITTER_COURSE_EXIT = 140 # !!
+LITTER_COURSE_ROT_0 = 275
+LITTER_COURSE_ROT_1 = 180
+LITTER_COURSE_ROT_2 = 75
+LITTER_COURSE_EXIT_0 = 0 # !!
+LITTER_TMR_ALIGN = 8
+LITTER_TMR_KISS = 7
+LITTER_TMR_DRIFT = 10
+LITTER_TMR_PUSH = 10
+LITTER_TMR_EXIT = 15
+LITTER_BOUND_CONT_AREA = 50
+LITTER_BOUND_EXIT = 2000
+
+FINISH_COURSE_HEAD = 290 
+FINISH_TMR = 15
 
 
 class StateMachine:
@@ -33,281 +64,361 @@ class StateMachine:
 
         match self.local_state:
             case "Start":
-                self.gates_fps = FramesPerSecond()
-                self.local_state = "by azi0"
-                self.pdc.set_setpoint(GATES_COURSE_0)
+                self.pdc.set_setpoint(GATES_COURSE_RED)
+                self.__update_local_state("Red")
 
-                self.gates_tmr = time()
+            case "Red":
+                self.__move_by_setpoint(SPEED)
 
-            case "by azi0":
-                self.pdc.tick(self.mega.azimuth, bypass=2)
+                if time() - self.state_tmr > GATES_TMR_RED: # pass gates
+                    self.pdc.set_setpoint(GATES_COURSE_GREEN) # turns little to left 
+                    self.__update_local_state("Green")
 
-                self.mega.set_diff_vel(
-                    l_vel=SPEED + self.pdc.U,
-                    r_vel=SPEED - self.pdc.U,
-                )
+            case "Green":
+                self.__move_by_setpoint(SPEED)
 
-                if time() - self.gates_tmr > GATES_TIME_0:
-                    self.local_state = "by azi1"
+                if time() - self.state_tmr > GATES_TMR_GREEN: # aligned perp between blue gates
+                    self.pdc.set_setpoint(GATES_COURSE_BLUE) # aligned perp between blue gates
+                    self.__update_local_state("Blue")
 
-                    self.pdc.set_setpoint(GATES_COURSE_1)
-                    self.gates_tmr = time()
+            case "Blue": 
+                self.__move_by_setpoint(SPEED)
 
-            case "by azi1":
-                self.pdc.tick(self.mega.azimuth, bypass=2)
+                if 1 or time() - self.state_tmr > GATES_TMR_BLUE: # pass blue gates
+                    self.__update_state("Sponge")
 
-                self.mega.set_diff_vel(
-                    l_vel=SPEED + self.pdc.U,
-                    r_vel=SPEED - self.pdc.U,
-                )
-
-                if time() - self.gates_tmr > GATES_TIME_1:
-                    self.local_state = "by azi2"
-                    self.pdc.set_setpoint(GATES_COURSE_2)
-
-                    self.gates_tmr = time()
-
-            case "by azi2":
-                self.pdc.tick(self.mega.azimuth, bypass=2)
-
-                self.mega.set_diff_vel(
-                    l_vel=SPEED + self.pdc.U,
-                    r_vel=SPEED - self.pdc.U,
-                )
-
-                if time() - self.gates_tmr > GATES_TIME_2:
-                    self.local_state = "by azi2"
-                    self.__update_state("Cube")
-
-        self.gates_fps.tick()
-
-    def __probo(self) -> None:
+    def __sponge(self) -> None:
         if not self.mega.bc.new_frame:
             return
 
         match self.local_state:
             case "Start":
-                self.pdc.set_setpoint(PROBO_HEAD)
-                self.probo_tmr = time()
-                self.local_state = "FindC"
+                self.pdc.set_setpoint(SPONGE_COURSE_HEAD)
+                self.__update_local_state("Search")
 
-            case "FindC":
-                self.pdc.tick(self.mega.azimuth, bypass=2)
+            case "Search": # searching for a contour at the bottom
+                self.__move_by_setpoint(SPEED)
 
-                self.mega.set_diff_vel(
-                    l_vel=80 + self.pdc.U,
-                    r_vel=80 - self.pdc.U,
-                )
+                sponge_mask = self.__mk_hsv_mask(self.mega.bc.src, Bounds.SPONGE)
+                sponge_cont = self.__get_biggest_cont(sponge_mask, SPONGE_BOUND_CONT_AREA)
 
-                self.mask = cv.inRange(
-                    cv.cvtColor(
-                        self.mega.bc.src,
-                        cv.COLOR_BGR2HSV,
-                    ),
-                    *Bounds.SPONGE,
-                )
-                cv.blur(self.mask, (9, 9), self.mask)
+                self.bc_panno = cv.cvtColor(sponge_mask, cv.COLOR_GRAY2BGR)
 
-                self.bc_panno = cv.cvtColor(self.mask, cv.COLOR_GRAY2BGR)
+                if time() - self.state_tmr > SPONGE_TMR_SEARCH:
+                    self.__move_by_setpoint(65)
 
-                conts = cv.findContours(
-                    self.mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE
-                )[0]
-
-                max = 0
-                ccc = None
-                if len(conts) > 0:
-                    for c in conts:
-                        s = cv.contourArea(c)
-                        if s > max and s > 100:
-                            ccc = c
-                            max = s
-
-                            x, y, w, h = cv.boundingRect(c)
-
-                            self.center = (x + w // 2, y + h // 2)
-
-                if ccc is not None:
-                    ex, ey = 160 - self.center[0], 120 - self.center[1]
-
-                    self.pdc.set_setpoint(PROBO_BUTT)
-                    self.probo_tmr = time()
-                    self.local_state = "Align"
+                if sponge_cont is not None and time() - self.state_tmr > SPONGE_TMR_SEARCH:
+                    self.pdc.set_setpoint(SPONGE_COURSE_HEAD)
                     self.mega.set_winch_state(1)
 
+                    self.__update_local_state("Align")
+
             case "Align":
-                self.pdc.tick(self.mega.azimuth, bypass=2)
+                self.__move_by_setpoint(speed=54)
 
-                self.mega.set_omni_vel(
-                    flv=54 + self.pdc.U,
-                    blv=54 + self.pdc.U,
-                    frv=54 - self.pdc.U,
-                    brv=54 - self.pdc.U,
+                sponge_mask = self.__mk_hsv_mask(self.mega.bc.src, Bounds.SPONGE)
+                sponge_cont = self.__get_biggest_cont(sponge_mask, SPONGE_BOUND_CONT_AREA)
+
+                self.bc_panno = cv.cvtColor(sponge_mask, cv.COLOR_GRAY2BGR)
+
+                if sponge_cont is None:
+                    return 
+
+                x, y, w, h = cv.boundingRect(sponge_cont)
+
+                cx, cy = x + w // 2, y + h // 2 
+                ex, ey = 160 - cx, 120 - cy
+
+                ex *= 0.1
+                ey *= 0.1
+
+                self.mega.add_omni_vel(
+                    flv=-ey + ex,
+                    frv=-ey - ex,
+                    blv=-ey - ex,
+                    brv=-ey + ex,
                 )
 
-                self.mask = cv.inRange(
-                    cv.cvtColor(
-                        self.mega.bc.src,
-                        cv.COLOR_BGR2HSV,
-                    ),
-                    *Bounds.SPONGE,
-                )
-                cv.blur(self.mask, (9, 9), self.mask)
-
-                self.bc_panno = cv.cvtColor(self.mask, cv.COLOR_GRAY2BGR)
-
-                conts = cv.findContours(
-                    self.mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE
-                )[0]
-
-                max = 0
-                ccc = None
-                if len(conts) > 0:
-                    for c in conts:
-                        s = cv.contourArea(c)
-                        if s > max and s > 100:
-                            ccc = c
-                            max = s
-
-                            x, y, w, h = cv.boundingRect(c)
-
-                            self.center = (x + w // 2, y + h // 2)
-
-                if ccc is not None:
-                    ex, ey = 160 - self.center[0], 120 - self.center[1]
-
-                    ex *= 0.1
-                    ey *= 0.1
-
-                    logger.info(f"{ex}    {ey}")
-
-                    self.mega.add_omni_vel(
-                        flv=ex - ey,
-                        frv=-ex - ey,
-                        blv=-ex - ey,
-                        brv=ex - ey,
-                    )
-
-                if time() - self.probo_tmr > 20:
+                if time() - self.state_tmr > SPONGE_TMR_WINCH:
                     if self.mega.winch == 2:
                         self.__update_state("Cube")
-                        self.mega.set_winch_state(0)
+                        return 
 
                     self.mega.set_winch_state(2)
-                    self.probo_tmr = time()
+                    self.pdc.set_setpoint(CUBE_COURSE_BUTT)
 
-    @staticmethod
-    def get_cont_c_coords_by_m(cont: MatLike) -> tuple[int, int]:
-        moments = cv.moments(cont)
-
-        return (
-            int(moments["m10"] // moments["m00"]),
-            int(moments["m01"] // moments["m00"]),
-        )
-
-    @staticmethod
-    def draw_cont(frame: MatLike, cont: MatLike) -> None:
-        cx, cy = StateMachine.get_cont_c_coords_by_m(cont)
-        x, y, w, h = cv.boundingRect(cont)
-
-        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
-        cv.circle(frame, (cx, cy), 3, (0, 255, 0), 2)
-
-    @staticmethod
-    def __find_biggest_cont(
-        mask: MatLike, lower_area: float = 1000, upper_area: float = 1000
-    ) -> MatLike | None:
-        conts = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)[0]
-
-        if conts is None:
-            return None
-
-        if not (len(conts) > 0):
-            return None
-
-        filtered_conts = [
-            cont for cont in conts if lower_area <= cv.contourArea(cont) <= upper_area
-        ]
-
-        if filtered_conts is None:
-            return None
-
-        if not (len(filtered_conts) > 0):
-            return None
-
-        max_cont, max_area = None, 0
-        for cont in filtered_conts:
-            if area := cv.contourArea(cont) > max_area:
-                max_area = area
-                max_cont = cont
-
-        return max_cont
-
-    def __sponge_bomb(self) -> None:
-        if not self.mega.bc.new_frame:
-            return
-
-        match self.local_state:
-            case "Start":
-                self.sponge_tmr = time()
-                self.local_state = "Align"
-                self.pdc.set_setpoint(SPONGE_HEAD)
-                self.sponge_mask = None
-
-            case "Align":
-                self.sponge_mask = cv.inRange(
-                    cv.cvtColor(
-                        self.mega.bc.src,
-                        cv.COLOR_BGR2HSV,
-                    ),
-                    *Bounds.SPONGE,
-                )
-
-                self.pdc.tick(self.mega.azimuth, bypass=2)
+                    self.__update_local_state(self.local_state)
 
     def __cube(self) -> None:
+        match self.local_state:
+            case "Start":
+                self.pdc.set_setpoint(CUBE_COURSE_BUTT)
+                self.__update_local_state("Butt2C")
+
+            case "Butt2C":
+                self.__move_by_setpoint(speed=45)
+
+                if time() - self.state_tmr > CUBE_TMR_BUTT:
+                    self.__update_local_state("Cubing")
+
+            case "Cubing":
+                self.__move_by_setpoint(speed=54)
+                self.mega.set_cube_state(1)
+
+                if time() - self.state_tmr > CUBE_TMR_CUBING:
+                    self.__update_state("Gates2")
+
+    def __2gates(self) -> None:
+        match self.local_state:
+            case "Start":
+                self.pdc.set_setpoint(GATES2_COURSE_RED)
+                self.__update_local_state("Red")
+
+            case"Red":
+                self.__move_by_setpoint(SPEED)
+
+                if time() - self.state_tmr > GATES2_TMR_RED: # pass gates
+                    self.pdc.set_setpoint(GATES2_COURSE_GREEN) # turns little to left 
+                    self.__update_local_state("Green")
+
+            case "Green":
+                self.__move_by_setpoint(SPEED)
+
+                if time() - self.state_tmr > GATES2_TMR_GREEN: # aligned perp between blue gates
+                    self.pdc.set_setpoint(GATES2_COURSE_BLUE) # aligned perp between blue gates
+                    self.__update_local_state("Blue")
+
+            case "Blue": 
+                self.__move_by_setpoint(SPEED)
+
+                if time() - self.state_tmr > GATES2_TMR_BLUE: # pass blue gates
+                    self.mega.idle()
+                    self.__update_state("Litter")
+
+    def __litter(self) -> None:
         if not self.mega.sc.new_frame:
             return
 
         match self.local_state:
             case "Start":
-                self.cube_fps = FramesPerSecond()
-                self.cube_tmr = time()
-                self.local_state = "2circle"
+                self.pdc.set_setpoint(LITTER_COURSE_HEAD)
+                self.__update_local_state("Align")
 
-            case "2circle":
-                self.pdc.tick(self.mega.azimuth, bypass=2)
+            case "Align":
+                self.mega.vel_range = (45, 60)
+                self.__move_by_setpoint(speed=54)
 
-                self.mega.set_diff_vel(
-                    l_vel=40 + self.pdc.U,
-                    r_vel=40 - self.pdc.U,
+                if time() - self.state_tmr > LITTER_TMR_ALIGN:
+                    self.__update_local_state("Kiss")
+
+            case "Kiss":
+                self.__move_by_setpoint(60)
+
+                scl = self.mega.sc.l.copy()
+
+                litter_mask = self.__mk_hsv_mask(scl, (np.array([0, 100, 0]), np.array([20, 255, 255])))
+                litter_cont = self.__get_biggest_cont_1(litter_mask, LITTER_BOUND_CONT_AREA)
+
+                if litter_cont is None:
+                    return 
+
+                x, y, w, h = cv.boundingRect(litter_cont)
+
+                cx = x + w // 2
+                ex = 160 - cx
+
+                ex *= 0.05
+
+                self.mega.add_omni_vel(
+                    flv=-ex,
+                    frv=ex,
+                    blv=ex,
+                    brv=-ex,
                 )
 
-                if time() - self.cube_tmr > 10:
-                    self.local_state = "Bomb"
-                    self.cube_tmr = time()
+                self.sc_panno = cv.cvtColor(litter_mask, cv.COLOR_GRAY2BGR)
+                logger.info(int(w * h))
 
-            case "Bomb":
-                self.mega.idle()
-                self.mega.set_cube_state(1)
+                if time() - self.state_tmr > 20:
+                    self.pdc.set_setpoint(LITTER_COURSE_ROT_0)
+                    self.__update_local_state("Push0")
 
-                if time() - self.cube_tmr > 5:
-                    self.local_state = "Idle"
+                if w * h > LITTER_BOUND_EXIT and time() - self.state_tmr > LITTER_TMR_KISS:
+                    self.pdc.set_setpoint(LITTER_COURSE_ROT_0)
+                    self.__update_local_state("Push0")
 
-            case "Idle":
-                self.mega.idle()
+            case "Push0":
+                self.__move_by_setpoint(speed=54)
+
+                self.mega.add_omni_vel(
+                    flv=10,
+                    frv=-10,
+                    blv=-10,
+                    brv=10,
+                )
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH:
+                    self.__update_local_state("Grab0")
+
+            case "Grab0":
+                self.__move_by_setpoint(speed=57)
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH + 3:
+                    self.pdc.set_setpoint(LITTER_COURSE_ROT_1)
+                    self.__update_local_state("Rot0")
+
+            case "Rot0":
+                self.mega.vel_range = (45, 60)
+                self.__move_by_setpoint(54)
+
+                if time() - self.state_tmr > 5:
+                    self.__update_local_state("Push1")
+
+            case "Push1":
+                self.__move_by_setpoint(speed=54)
+
+                self.mega.add_omni_vel(
+                    flv=10,
+                    frv=-10,
+                    blv=-10,
+                    brv=10,
+                )
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH - 5:
+                    self.__update_local_state("Grab1")
+
+            case "Grab1":
+                self.__move_by_setpoint(speed=70)
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH-5:
+                    self.pdc.set_setpoint(LITTER_COURSE_ROT_1 + 40)
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH + 5:
+                    self.pdc.set_setpoint(LITTER_COURSE_ROT_2)
+                    self.__update_local_state("Rot1")
+
+            case "Rot1":
+                self.mega.vel_range = (45, 60)
+                self.__move_by_setpoint(54)
+
+                if time() - self.state_tmr > 5:
+                    self.__update_local_state("Push2")
+
+            case "Push2":
+                self.__move_by_setpoint(speed=54)
+
+                self.mega.add_omni_vel(
+                    flv=10,
+                    frv=-10,
+                    blv=-10,
+                    brv=10,
+                )
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH:
+                    self.__update_local_state("Grab2")
+
+            case "Grab2":
+                self.__move_by_setpoint(speed=70)
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH + 5:
+                    self.__update_local_state("Exit")
+                    self.pdc.set_setpoint(3)
+
+            case "Exit":
+                self.__move_by_setpoint(SPEED)
+
+                if time() - self.state_tmr > 10:
+                    self.__update_state("Finish")
+
+
+
+
+    def __finish(self) -> None:
+        match self.local_state:
+            case "Start":
+                self.pdc.set_setpoint(FINISH_COURSE_HEAD)
+                self.__update_local_state("Finish")
+
+            case "Finish":
+                self.__move_by_setpoint(60)
+
+                if time() - self.state_tmr > FINISH_TMR:
+                    self.__update_state("Idle")
+                    print('\n\n\n')
+                    logger.success("Good girl")
+
+    def __idle(self) -> None:
+        self.mega.idle()
+
+    def __mk_hsv_mask(self, frame: MatLike, bound: tuple) -> MatLike:
+        mask = cv.inRange(
+            cv.cvtColor(frame, cv.COLOR_BGR2HSV),
+            bound[0],
+            bound[1],
+        )
+        return mask
+
+    def __get_biggest_cont(self, mask: MatLike, area_bound: int | float) -> MatLike | None:
+        conts = cv.findContours(
+            mask,
+            cv.RETR_EXTERNAL,
+            cv.CHAIN_APPROX_SIMPLE,
+        )[0]
+
+        if conts is None:
+            return None 
+
+        max_cont = None, 0.0
+        for cont in conts:
+            cont_area = cv.contourArea(cont)
+            if cont_area > max_cont[1] and cont_area > area_bound:
+                max_cont = (cont, cont_area)
+
+        return max_cont[0] 
+
+    def __get_biggest_cont_1(self, mask: MatLike, area_bound: int | float) -> MatLike | None:
+        conts = cv.findContours(
+            mask,
+            cv.RETR_EXTERNAL,
+            cv.CHAIN_APPROX_SIMPLE,
+        )[0]
+
+        if conts is None:
+            return None 
+
+        max_cont = None, 0.0
+        for cont in conts:
+            cont_area = cv.contourArea(cont)
+            if cont_area > max_cont[1] and cont_area > area_bound:
+                x, y, w, h = cv.boundingRect(cont)
+                if y < 120:
+                    max_cont = (cont, cont_area)
+
+        return max_cont[0] 
+
+    def __move_by_setpoint(self, speed: int | float) -> None:
+        self.pdc.tick(self.mega.azimuth, bypass=2)
+
+        self.mega.set_diff_vel(
+            l_vel=speed + self.pdc.U,
+            r_vel=speed - self.pdc.U,
+        )
 
     def __init__(self, mega: MEGA) -> None:
         self.mega = mega
 
+        self.state = "Starting"
+        self.state_tmr = time()
+        self.local_state = "Start"
+
+        logger.info("Cams Initting...")
         while True:
             try:
                 if self.mega.sc._new_frame and self.mega.bc._new_frame:
                     break
             except:
                 pass
-
-        logger.info("Cams Initted")
+        logger.info("Cams Initted!")
 
         self.sc_panno: MatLike = self.mega.sc.l
         self.bc_panno: MatLike = self.mega.bc.src
@@ -315,13 +426,9 @@ class StateMachine:
             ("Azi/", self.mega.azimuth),
             ("Mode/", self.mega.mode),
             ("Stt/", f"{self.state}-{self.local_state}"),
-            # ("FPS/", self.state_machine_fps.value),
+            ("Tmr/", round(float(time() - self.state_tmr)), 1),
             ("Pkg/", self.mega.tx_pkg),
         ]
-
-        self.state = "Starting"
-        self.state_tmr = time()
-        self.local_state = "Start"
 
         self.state_machine_fps = FramesPerSecond()
 
@@ -334,6 +441,7 @@ class StateMachine:
         self.last_mode = "Manual"
         self.is_starting = False
 
+
     def __start(self) -> None:
         self.mega.idle()
         if self.mega.mode == "Autonomous":
@@ -345,29 +453,42 @@ class StateMachine:
                 logger.info(self.mega.mode)
                 self.is_starting = True
 
+
     def tick(self) -> None:
         self.state_machine_fps.tick()
 
         self.sc_panno: MatLike = self.mega.sc.l
-        self.bc_panno: MatLike = self.mega.bc.src
+        self.bc_panno: MatLike = self.mega.bc.src 
 
         if self.mega.mode == "Manual":
             self.__update_state("Starting")
             self.is_starting = True
 
+        self.telemetry = [
+            ("azi", self.mega.azimuth),
+            ("mode", self.mega.mode),
+            ("stt", f"{self.state}-{self.local_state}"),
+            ("tmr", round(float(time() - self.state_tmr)), 3),
+            ("pkg", self.mega.tx_pkg),
+        ]
+
         match self.state:
-            case "Idle":
-                self.__idle()
             case "Starting":
                 self.__start()
             case "Gates":
                 self.__gates()
+            case "Sponge":
+                self.__sponge()
             case "Cube":
                 self.__cube()
-            case "Probo":
-                self.__probo()
-            case "Sponge":
-                self.__sponge_bomb()
+            case "Gates2":
+                self.__2gates()
+            case "Litter":
+                self.__litter()
+            case "Finish":
+                self.__finish()
+            case "Idle":
+                self.__idle()
 
         self.mega.sn.set_frame(
             cv.hconcat(
@@ -383,11 +504,13 @@ class StateMachine:
         logger.info(f"New State: {new_state}")
 
         self.state = new_state
-        self.local_state = "Start"
-        self.mega.idle()
+        self.__update_local_state("Start")
 
-    def __idle(self) -> None:
-        self.mega.idle()
+    def __update_local_state(self, new_local_state: str) -> None:
+        logger.info(f"New Local State: {new_local_state}")
+
+        self.state_tmr = time()
+        self.local_state = new_local_state
 
 
 if __name__ == "__main__":
@@ -402,7 +525,7 @@ if __name__ == "__main__":
     while True:
         state_machine.tick()
 
-        if time() - tx_tmr > 0.05 or received:
+        if time() - tx_tmr > 0.1 or received:
             ser.write(state_machine.mega.tx_pkg.encode("utf-8"))
 
             tx_tmr = time()
@@ -415,7 +538,7 @@ if __name__ == "__main__":
                 if ser.in_waiting:
                     ret = ser.read().decode("utf-8")
 
-                    if time() - timeout_tmr > 0.05 and 0:
+                    if time() - timeout_tmr > 0.1 and 0:
                         break
 
                     if ret != "$":

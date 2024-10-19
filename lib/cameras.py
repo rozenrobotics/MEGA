@@ -1,6 +1,6 @@
 from threading import Thread
 
-from cv2 import CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, VideoCapture
+from cv2 import CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, VideoCapture, blur
 from cv2.typing import MatLike
 from loguru import logger
 
@@ -61,16 +61,24 @@ class StereoCamera(Camera):
         self.l_roi = [0, self.height, 0, self.width // 2]
         self.r_roi = [0, self.height, self.width // 2, self.width]
 
+        self.BLUR_KERNEL = (5, 5)
+
     @property
     def l(self) -> MatLike:
-        return self.src[
-            self.l_roi[0] : self.l_roi[1],
-            self.l_roi[2] : self.l_roi[3],
-        ]
+        return blur(
+                self.src[
+                    self.l_roi[0] : self.l_roi[1],
+                    self.l_roi[2] : self.l_roi[3],
+                ],
+                self.BLUR_KERNEL,
+        )
 
     @property
     def r(self) -> MatLike:
-        return self.src[
-            self.r_roi[0] : self.r_roi[1],
-            self.r_roi[2] : self.r_roi[3],
-        ]
+        return blur(
+                self.src[
+                    self.r_roi[0] : self.r_roi[1],
+                    self.r_roi[2] : self.r_roi[3],
+                ],
+                self.BLUR_KERNEL,
+        )
