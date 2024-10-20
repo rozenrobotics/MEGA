@@ -1,2 +1,0 @@
-# MEGA
-MEGA Robotics Boat
