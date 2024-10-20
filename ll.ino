@@ -80,6 +80,8 @@ bool flag1;
 bool flag2;
 bool flag3;
 
+
+
 void convertedRawValue();
 void readCompassSensor();
 uint16_t adjustValue(uint16_t value);
@@ -94,10 +96,6 @@ void cube_down();
 void winch_up();
 void winch_down();
 void winch_stop();
-
-void autonomous()
-{
-}
 
 void readCompassSensor() {
   Wire.beginTransmission(COMPASS_ADDRESS);
