@@ -13,48 +13,47 @@ from serial import Serial
 from static.bounds import Bounds
 
 SPEED = 85 
-START_STATE = "Gates2"
+START_STATE = "Gates"
 
 GATES_COURSE_RED = 110
 GATES_COURSE_GREEN = 240 
 GATES_COURSE_BLUE = 240
 GATES_TMR_RED = 17
 GATES_TMR_GREEN = 6
-GATES_TMR_BLUE = 1
+GATES_TMR_BLUE = 2
 
 GATES2_COURSE_RED = 15
 GATES2_COURSE_GREEN = 315 
 GATES2_COURSE_BLUE = 240
 GATES2_TMR_RED = 6
-GATES2_TMR_GREEN = 8
-# GATES2_TMR_BLUE = 8 # no litter 
-GATES2_TMR_BLUE = 11 # litter
+GATES2_TMR_GREEN = 9
+GATES2_TMR_BLUE = 12 
 
 SPONGE_COURSE_HEAD = 285
 SPONGE_TMR_SEARCH = 6
 SPONGE_TMR_WINCH = 20
 SPONGE_BOUND_CONT_AREA = 1000
 
-CUBE_COURSE_BUTT = 35
+CUBE_COURSE_BUTT = 25 
 CUBE_TMR_BUTT = 5 
 CUBE_TMR_CUBING = 2
 
-LITTER_COURSE_HEAD = 295
-LITTER_COURSE_EXIT = 140 # !!
-LITTER_COURSE_ROT_0 = 275
-LITTER_COURSE_ROT_1 = 180
-LITTER_COURSE_ROT_2 = 75
-LITTER_COURSE_EXIT_0 = 0 # !!
+LITTER_FLAG = True
+LITTER_COURSE_ALIGN = 295 
+LITTER_COURSE_GRAB_0 = 275 
+LITTER_COURSE_GRAB_1 = 180
+LITTER_COURSE_GRAB_2 = 75
+LITTER_COURSE_EXIT = 3
 LITTER_TMR_ALIGN = 8
 LITTER_TMR_KISS = 7
 LITTER_TMR_DRIFT = 10
 LITTER_TMR_PUSH = 10
-LITTER_TMR_EXIT = 15
+LITTER_TMR_EXIT = 10
 LITTER_BOUND_CONT_AREA = 50
-LITTER_BOUND_EXIT = 2000
+LITTER_BOUND_EXIT = 500
 
 FINISH_COURSE_HEAD = 290 
-FINISH_TMR = 15
+FINISH_TMR = 18
 
 
 class StateMachine:
@@ -68,7 +67,7 @@ class StateMachine:
                 self.__update_local_state("Red")
 
             case "Red":
-                self.__move_by_setpoint(SPEED)
+                self.__move_by_setpoint(SPEED + 13)
 
                 if time() - self.state_tmr > GATES_TMR_RED: # pass gates
                     self.pdc.set_setpoint(GATES_COURSE_GREEN) # turns little to left 
@@ -142,9 +141,11 @@ class StateMachine:
                 if time() - self.state_tmr > SPONGE_TMR_WINCH:
                     if self.mega.winch == 2:
                         self.__update_state("Cube")
+                        self.mega.vel_range = (10, 98)
                         return 
 
                     self.mega.set_winch_state(2)
+                    self.mega.vel_range = (45, 60)
                     self.pdc.set_setpoint(CUBE_COURSE_BUTT)
 
                     self.__update_local_state(self.local_state)
@@ -191,9 +192,12 @@ class StateMachine:
             case "Blue": 
                 self.__move_by_setpoint(SPEED)
 
+                if time() - self.state_tmr > GATES2_TMR_BLUE - 3:
+                    self.mega.vel_range = (45, 60)
+
                 if time() - self.state_tmr > GATES2_TMR_BLUE: # pass blue gates
                     self.mega.idle()
-                    self.__update_state("Litter")
+                    self.__update_state("Litter" if LITTER_FLAG else "Finish")
 
     def __litter(self) -> None:
         if not self.mega.sc.new_frame:
@@ -201,7 +205,7 @@ class StateMachine:
 
         match self.local_state:
             case "Start":
-                self.pdc.set_setpoint(LITTER_COURSE_HEAD)
+                self.pdc.set_setpoint(LITTER_COURSE_ALIGN)
                 self.__update_local_state("Align")
 
             case "Align":
@@ -239,32 +243,39 @@ class StateMachine:
                 self.sc_panno = cv.cvtColor(litter_mask, cv.COLOR_GRAY2BGR)
                 logger.info(int(w * h))
 
-                if time() - self.state_tmr > 20:
-                    self.pdc.set_setpoint(LITTER_COURSE_ROT_0)
+                if time() - self.state_tmr > 9:
+                    self.pdc.set_setpoint(LITTER_COURSE_GRAB_0)
                     self.__update_local_state("Push0")
 
                 if w * h > LITTER_BOUND_EXIT and time() - self.state_tmr > LITTER_TMR_KISS:
-                    self.pdc.set_setpoint(LITTER_COURSE_ROT_0)
+                    self.pdc.set_setpoint(LITTER_COURSE_GRAB_0)
                     self.__update_local_state("Push0")
 
             case "Push0":
                 self.__move_by_setpoint(speed=54)
 
                 self.mega.add_omni_vel(
-                    flv=10,
+                    flv=20,
                     frv=-10,
                     blv=-10,
-                    brv=10,
+                    brv=20,
                 )
 
                 if time() - self.state_tmr > LITTER_TMR_PUSH:
                     self.__update_local_state("Grab0")
 
             case "Grab0":
-                self.__move_by_setpoint(speed=57)
+                self.__move_by_setpoint(speed=62)
 
-                if time() - self.state_tmr > LITTER_TMR_PUSH + 3:
-                    self.pdc.set_setpoint(LITTER_COURSE_ROT_1)
+                self.mega.add_omni_vel(
+                    flv=15,
+                    frv=0,
+                    blv=0,
+                    brv=15,
+                )
+
+                if time() - self.state_tmr > LITTER_TMR_PUSH + 5:
+                    self.pdc.set_setpoint(LITTER_COURSE_GRAB_1)
                     self.__update_local_state("Rot0")
 
             case "Rot0":
@@ -278,23 +289,27 @@ class StateMachine:
                 self.__move_by_setpoint(speed=54)
 
                 self.mega.add_omni_vel(
-                    flv=10,
+                    flv=20,
                     frv=-10,
                     blv=-10,
-                    brv=10,
+                    brv=20,
                 )
 
-                if time() - self.state_tmr > LITTER_TMR_PUSH - 5:
+                if time() - self.state_tmr > LITTER_TMR_PUSH:
                     self.__update_local_state("Grab1")
 
             case "Grab1":
-                self.__move_by_setpoint(speed=70)
+                self.__move_by_setpoint(speed=62)
 
-                if time() - self.state_tmr > LITTER_TMR_PUSH-5:
-                    self.pdc.set_setpoint(LITTER_COURSE_ROT_1 + 40)
+                self.mega.add_omni_vel(
+                    flv=15,
+                    frv=0,
+                    blv=0,
+                    brv=15,
+                )
 
                 if time() - self.state_tmr > LITTER_TMR_PUSH + 5:
-                    self.pdc.set_setpoint(LITTER_COURSE_ROT_2)
+                    self.pdc.set_setpoint(LITTER_COURSE_GRAB_2)
                     self.__update_local_state("Rot1")
 
             case "Rot1":
@@ -302,36 +317,21 @@ class StateMachine:
                 self.__move_by_setpoint(54)
 
                 if time() - self.state_tmr > 5:
-                    self.__update_local_state("Push2")
-
-            case "Push2":
-                self.__move_by_setpoint(speed=54)
-
-                self.mega.add_omni_vel(
-                    flv=10,
-                    frv=-10,
-                    blv=-10,
-                    brv=10,
-                )
-
-                if time() - self.state_tmr > LITTER_TMR_PUSH:
                     self.__update_local_state("Grab2")
+                    self.mega.vel_range = (10, 98)
 
             case "Grab2":
                 self.__move_by_setpoint(speed=70)
 
-                if time() - self.state_tmr > LITTER_TMR_PUSH + 5:
+                if time() - self.state_tmr > 5:
                     self.__update_local_state("Exit")
-                    self.pdc.set_setpoint(3)
+                    self.pdc.set_setpoint(LITTER_COURSE_EXIT)
 
             case "Exit":
                 self.__move_by_setpoint(SPEED)
 
-                if time() - self.state_tmr > 10:
+                if time() - self.state_tmr > 3:
                     self.__update_state("Finish")
-
-
-
 
     def __finish(self) -> None:
         match self.local_state:
